@@ -1,0 +1,12 @@
+[package]
+name = "web_server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+colored = "2.1.0"
+futures = "0.3.30"
+local-ip-address = "0.6.1"
+spmc = "0.3.0"
+tiny_http = "0.12.0"
+ws = "0.9.2"

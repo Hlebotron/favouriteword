@@ -1,0 +1,19 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Game</title>
+		<style>
+			* {
+				transition: opacity 0.25s ease-in-out;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Favourite word</h1>
+		<p id="serverEvent">Placeholder</p>
+		<input onkeypress="sanitize()" type="text" name="name" id="name" placeholder="Name">
+		<input onkeypress="sanitize()" type="text" name="word" id="word" placeholder="Word of Choice">
+		<button id="submit" onclick="refreshPage()">Submit</button>
+		<script src="index.js"></script>
+	</body>
+</html>
