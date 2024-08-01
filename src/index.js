@@ -5,7 +5,6 @@ const body = document.getElementsByTagName("body")[0];
 const address = window.location.href.split("//").at(1).split(":").at(0);
 const port = Number(window.location.href.split("//").at(1).split(":").at(1).split("/").at(0)) + 1;
 const socketAddress = `${address}:${port}`;
-console.log(socketAddress);
 function sanitize() {
 	
 	let name = nameElement.value;
@@ -60,23 +59,24 @@ function addData() {
 		body: nameElement.value + "&" + wordElement.value 
 	});
 }
-let socket = localStorage.getItem("webSocket");
-console.log(socket);
-socket = new WebSocket(`ws://${socketAddress}`);
-if (localStorage.length == 0) {
+//let socket = localStorage.getItem("webSocket");
+//console.log(socket);
+let socket = new WebSocket(`ws://${socketAddress}`);
+/*if (localStorage.length == 0) {
 	socket = new WebSocket(`ws://${socketAddress}`);
-	localStorage.setItem("webSocket", socket);
-}
+}*/
+//console.log(Object.keys(socket));
+//localStorage.setItem("webSocket", socket);
 //localStorage.clear();
 socket.onopen = () => {
 	socket.send("Hello from Client");
+	setTimeout(() => {socket.send("delayed")}, 3000);
 }
 socket.onmessage = (message) => {
 	console.log(message.data);
 	document.getElementById("serverEvent").innerHTML = message.data;
 }
 window.onbeforeunload = () => {
-	socket.send("Connection closing");
 	socket.close();
 }
-setInterval(sanitize, 300);
+setInterval(sanitize, 1000);
