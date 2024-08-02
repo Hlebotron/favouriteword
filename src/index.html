@@ -11,9 +11,9 @@
 	<body>
 		<h1>Favourite word</h1>
 		<p id="serverEvent">Placeholder</p>
-		<input onkeypress="sanitize()" type="text" name="name" id="name" placeholder="Name">
-		<input onkeypress="sanitize()" type="text" name="word" id="word" placeholder="Word of Choice">
-		<button id="submit" onclick="refreshPage()">Submit</button>
+		<input type="text" name="name" id="name" placeholder="Name">
+		<input type="text" name="word" id="word" placeholder="Word of Choice">
+		<button id="submit" onclick="addData(); refreshPage()">Submit</button>
 		<script src="index.js"></script>
 	</body>
 </html>

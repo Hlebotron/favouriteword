@@ -11,7 +11,6 @@ socket.onopen = () => {
 socket.onmessage = (message) => {
 	let data = document.createElement("li");
 	data.innerHTML = message.data;
-	console.log(messages);
 	messages.appendChild(data);
 }
 const body = document.getElementsByTagName("body")[0];

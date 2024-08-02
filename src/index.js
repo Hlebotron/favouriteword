@@ -5,6 +5,15 @@ const body = document.getElementsByTagName("body")[0];
 const address = window.location.href.split("//").at(1).split(":").at(0);
 const port = Number(window.location.href.split("//").at(1).split(":").at(1).split("/").at(0)) + 1;
 const socketAddress = `${address}:${port}`;
+
+let isSent = localStorage.getItem("isSent");
+if (isSent == null) {
+	localStorage.setItem("isSent", "false");
+	isSent = "false";
+	console.log("Local storage is empty");
+}
+console.log(isSent);
+
 function sanitize() {
 	
 	let name = nameElement.value;
@@ -54,10 +63,17 @@ function refreshPage() {
 }*/
 function addData() {
 	sanitize();
-	fetch("/adddata", { 
-		method: "POST", 
-		body: nameElement.value + "&" + wordElement.value 
-	});
+	if (isSent == "false") {
+		let data = nameElement.value + "&" + wordElement.value ;
+		console.log(data);
+		fetch("/adddata", { 
+			method: "POST", 
+			body: data
+		});
+		localStorage.setItem("isSent", "true");
+	} else {
+		console.log("Not sent");
+	}
 }
 //let socket = localStorage.getItem("webSocket");
 //console.log(socket);
@@ -79,4 +95,4 @@ socket.onmessage = (message) => {
 window.onbeforeunload = () => {
 	socket.close();
 }
-setInterval(sanitize, 1000);
+//setInterval(sanitize, 1000);

@@ -22,22 +22,41 @@ fn main() {
         println!("Please specify the root directory in 'main.rs'");
         exit(1) }
     let args: Vec<String> = args().collect();
-    if args.len() != 2{
-        usage();
-        exit(1);
-    } else {
+    /*if args.len() == 4{
         let ip_addr = &args[1];
-        let success = start_server(ip_addr);
+        let port1 = &args[1];
+        let port2 = &args[2];
+        let success = start_server(ip_addr, port1, port2);
         match success {
             Ok(()) => exit(0),
             Err(()) => exit(1),
         } 
-    }
+    } else if args.len() == 3 {
+        let ip_addr = 
+    } else {
+    }*/
+    let success = match args.len() {
+        3 => {
+            let port2 = (&args[2].parse::<u16>().expect("Not a number") + 1).to_string();
+            let port3 = (&args[2].parse::<u16>().expect("Not a number") + 2).to_string();
+            start_server(&args[1], &args[2], &port2, &port3)
+        },
+        _ => {
+            usage();
+            exit(1);
+        }
+    };
+    match success {
+        Ok(()) => exit(0),
+        Err(()) => exit(1),
+    } 
 }
 fn usage() {
     println!(r#"
 USAGE:
     cargo run <ip address>
+
+NOTE: The WebSocket and Command server each take up 1 port (eg. if you set the port to 6969, 6970 and 6971 will also be taken up), so distance each instance of this server by at least 3 ports
 "#);
 }
 
@@ -83,26 +102,31 @@ struct Thread_List<'a> {
     list: Vec<ScopedJoinHandle<'a, ()>>,
 }
 
-pub fn start_server(ip_input: &str) -> Result<(), ()> {
+pub fn start_server(address: &str, port1: &str, port2: &str, port3: &str) -> Result<(), ()> {
     let ip_addr = local_ip().unwrap_or_else(|err| {
         eprintln!("{error}: Could not get local IP address: {}", err, error = "ERROR".red().bold());
         IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
-    });
-    let mut ip_address: String = ip_addr.to_string();
-    ip_address.push_str(":6969");
-    run_server(ip_input, ROOT_DIR).or_else(|_|{
-        run_server(&ip_address, ROOT_DIR)
+    }).to_string();
+    run_server(address, port1, port2, port3, ROOT_DIR).or_else(|_|{
+        run_server(&ip_addr, port1, port2, port3, ROOT_DIR)
     }).or_else(|err| {
         eprintln!("{fatal_error}: Could not start server", fatal_error = "FATAL ERROR".red().bold());
         Err(())
     });
     Ok(())
 }
-fn run_server(address: &str, directory: &str) -> Result<(), ()> {
-    let server = Server::http(address).map_err(|err| {
+fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &str) -> Result<(), ()> {
+    let server_address = format!("{address}:{port1}");
+    let server = Server::http(&server_address).map_err(|err| {
         eprintln!("{error}: Could not start server at {}: {}", &address, err, error = "ERROR".red().bold());
     })?;
-    println!("{info}: Server is up at {}", &address.bold().yellow(), info = "INFO".green().bold());
+    println!("{info}: Server is up at {}", &server_address.bold().yellow(), info = "INFO".green().bold());
+    
+    let control_address = format!("{address}:{port3}");
+    let control_server = Server::http(&control_address).map_err(|err| {
+        eprintln!("{error}: Could not start server at {}: {}", &address, err, error = "ERROR".red().bold());
+    })?;
+    println!("{info}: Control server is up at {}", &control_address.bold().yellow(), info = "INFO".green().bold());
     //let mut thread_list = Thread_List {list: Vec::new()};
     //let baddress: <&str as ToBoundedStatic>::Static = address.to_static();
     //println!("{}", baddress);
@@ -118,7 +142,6 @@ fn run_server(address: &str, directory: &str) -> Result<(), ()> {
                     },
                     (Method::Get, "/index.js") => {
                         serve(&file("index.js"), request);
-                        start_stream(address/*, &mut thread_list*/);
                     },
                     (Method::Get, "/favicon.ico") | (Method::Get, "/apple-touch-icon.png") => {
                         serve(&file("favicon.ico"), request);
@@ -153,13 +176,12 @@ fn run_server(address: &str, directory: &str) -> Result<(), ()> {
         let broadcast_ws = ws.broadcaster();
         let mut index = 0;
         let listen_thread = s.spawn(move || {
-            let split_address: Vec<&str> = address.split(":").collect();
+            /*let split_address: Vec<&str> = address.split(":").collect();
             let address: &str = split_address[0];
             let mut port = split_address[1].parse::<u16>().unwrap();
-            port += 1;
-            let socket_address: String = format!("{address}:{port}");
+            port += 1;*/
+            let socket_address: String = format!("{address}:{port2}");
             //let handle = thread::scope(|s| /*-> ScopedJoinHandle<_>*/ {
-            println!("{}", address);
             let listener = ws.listen(socket_address);
             //println!("{:?}", websocket.unwrap());
             /*listen(&socket_address, |socket| {
@@ -181,17 +203,48 @@ fn run_server(address: &str, directory: &str) -> Result<(), ()> {
         let broadcast_thread = s.spawn(move || {
             //let address = address; 
             loop {
-                sleep(Duration::from_secs(1));
+                sleep(Duration::from_millis(250));
                 if let Ok(message) = rx.try_recv() {
-                    broadcast_ws.send(format!("Interval: {message} seconds"));
+                    broadcast_ws.send(message);
                 }
             }
         });
-        let tx_thread = s.spawn(move || {
+        /*let tx_thread = s.spawn(move || {
             loop {
                 let random: u64 = thread_rng().gen_range(1..=30);
+                let random_string = random.to_string();
                 sleep(Duration::from_secs(random)); 
-                tx.send(random);
+                tx.send(&random_string);
+            }
+        });*/
+        let control_thread = s.spawn(move || {
+            loop {
+                let mut request = control_server.recv().unwrap(); 
+                println!("{comm}: Received request: {}", &request.url(), comm = "CTRL".blue().bold());
+                match request.url() {
+                    "/" | "/index.html" | "/command.html" => {
+                        serve(&file("command.html"), request);
+                    },
+                    "/command.js" => {
+                        serve(&file("command.js"), request);
+                    },
+                    "/favicon.ico" | "/apple-touch-icon.png" => {
+                        serve(&file("favicon.ico"), request);
+                    },
+                    "/startAsking" => {
+                        tx.send("cmd:startAsking");
+                        request.respond(Response::from_string("ok"));
+                    },
+                    _ => { 
+                        let mut content: String = "".to_string();
+                        request.as_reader().read_to_string(&mut content).map_err(|err| {
+                            eprintln!("{error}: Could not read request content to string: {err}", error = "ERROR".red().bold());
+                            "Unknown".to_string()
+                        });
+                        eprintln!("{error}: Invalid command {}",  request.url(), error = "ERROR".red().bold());
+                        request.respond(Response::from_string("404"));
+                    },
+                }
             }
         });
     });
@@ -242,9 +295,4 @@ fn delete_file_content(file_path: &str) -> Result<(), ()>{
 fn file(file_path: &str) -> String {
     let path = format!("{ROOT_DIR}/src/{file_path}");
     path
-}
-fn start_stream<'b>(address: &str/*, thread_list: &mut Thread_List*/) {
-    //let (mut tx, rx) = spmc::channel::<String>();
-    //tx.send(address.to_string()).unwrap();
-    //thread_list.list.push(thread);
 }
