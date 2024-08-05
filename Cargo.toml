@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bounded-static = "0.8.0"
 colored = "2.1.0"
 futures = "0.3.30"
 local-ip-address = "0.6.1"

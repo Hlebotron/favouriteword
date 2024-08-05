@@ -1,4 +1,3 @@
-console.log("It's commandin' time");
-function startAsking() {
-	fetch("/startAsking");	
+function sendCommand(command) {
+	fetch(command);
 }

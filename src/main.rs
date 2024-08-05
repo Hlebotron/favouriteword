@@ -14,27 +14,14 @@ use futures::{stream::Stream, executor::block_on};
 use ws::{Sender, Factory, Handler, Handshake, WebSocket, listen, Message::{self, Text}, CloseCode};
 use spmc;
 use std::sync::mpsc::channel;
-use bounded_static::ToBoundedStatic;
 use rand::{thread_rng, Rng};
 
 fn main() {
+    println!("TODO: Fix nextWord down in the controls section (Including converting to JSON)");
     if ROOT_DIR == "" {
         println!("Please specify the root directory in 'main.rs'");
         exit(1) }
     let args: Vec<String> = args().collect();
-    /*if args.len() == 4{
-        let ip_addr = &args[1];
-        let port1 = &args[1];
-        let port2 = &args[2];
-        let success = start_server(ip_addr, port1, port2);
-        match success {
-            Ok(()) => exit(0),
-            Err(()) => exit(1),
-        } 
-    } else if args.len() == 3 {
-        let ip_addr = 
-    } else {
-    }*/
     let success = match args.len() {
         3 => {
             let port2 = (&args[2].parse::<u16>().expect("Not a number") + 1).to_string();
@@ -127,9 +114,6 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
         eprintln!("{error}: Could not start server at {}: {}", &address, err, error = "ERROR".red().bold());
     })?;
     println!("{info}: Control server is up at {}", &control_address.bold().yellow(), info = "INFO".green().bold());
-    //let mut thread_list = Thread_List {list: Vec::new()};
-    //let baddress: <&str as ToBoundedStatic>::Static = address.to_static();
-    //println!("{}", baddress);
     let (tx, rx) = channel();
     thread::scope(|s| {
         let request_thread = s.spawn(move || {
@@ -158,6 +142,9 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                     },
                     (Method::Get, "/waiting.js") => {
                         serve(&file("waiting.js"), request);
+                    },
+                    (Method::Get, "/events") => {
+                        serve(&file("events"), request);
                     },
                     _ => { 
                         let mut content: String = "".to_string();
@@ -203,7 +190,7 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
         let broadcast_thread = s.spawn(move || {
             //let address = address; 
             loop {
-                sleep(Duration::from_millis(250));
+                sleep(Duration::from_millis(100));
                 if let Ok(message) = rx.try_recv() {
                     broadcast_ws.send(message);
                 }
@@ -218,6 +205,7 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
             }
         });*/
         let control_thread = s.spawn(move || {
+            let mut asking = false;
             loop {
                 let mut request = control_server.recv().unwrap(); 
                 println!("{comm}: Received request: {}", &request.url(), comm = "CTRL".blue().bold());
@@ -232,7 +220,20 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                         serve(&file("favicon.ico"), request);
                     },
                     "/startAsking" => {
-                        tx.send("cmd:startAsking");
+                        if true {
+                            tx.send("cmd:startAsking");
+                            println!("{comm}: Broadcasting: {}", &request.url(), comm = "CTRL".blue().bold());
+                            request.respond(Response::from_string("ok"));
+                            let line = cut_line_from_data();
+                            println!("{}", line.unwrap());
+                        } else {
+                            println!("{comm}: Already started asking", comm = "CTRL".blue().bold());
+                        }
+                        asking = true;
+                    },
+                    "/nextWord" => {
+                        println!("Next word requested");
+                        tx.send("events:conga line");
                         request.respond(Response::from_string("ok"));
                     },
                     _ => { 
@@ -295,4 +296,37 @@ fn delete_file_content(file_path: &str) -> Result<(), ()>{
 fn file(file_path: &str) -> String {
     let path = format!("{ROOT_DIR}/src/{file_path}");
     path
+}
+fn cut_line_from_data() -> Result<String, ()>{
+    let mut file_reader = File::options().read(true).open(file("data")).unwrap_or_else(|err| {
+        eprintln!("{error}: Could not open file {}: {} => Creating file", "data", err, error = "ERROR".red().bold());
+        File::create("data").unwrap()
+    });
+    let mut file_writer = File::options().write(true).open(file("data")).unwrap_or_else(|err| {
+        eprintln!("{error}: Could not open file {}: {} => Creating file", "data", err, error = "ERROR".red().bold());
+        File::create("data").unwrap()
+    });
+    let mut file_content: String = Default::default();
+    file_reader.read_to_string(&mut file_content);
+    let mut file_lines: Vec<_> = file_content.lines().collect();
+    if file_lines.len() > 0 {
+        let line_number = thread_rng().gen_range(0..file_lines.len()); 
+        println!("File lines: {:?}", file_lines);
+        let line = file_lines.remove(line_number);
+        println!("File lines: {:?}", file_lines);
+        let mut file_string = file_lines.join("\n");
+        file_string.push_str("\n");
+        File::options().write(true).truncate(true).open(file("data")).unwrap_or_else(|err| {
+            eprintln!("{error}: Could not open file {}: {} => Creating file", "data", err, error = "ERROR".red().bold());
+            File::create("data").unwrap()
+        });
+        file_writer.write(file_string.as_bytes());
+        println!("File string: {}", file_string);
+        println!("Line: {:?}", line);
+        println!("Line number: {:?}", line_number);
+        Ok(file_string)
+    } else {
+        Ok("".to_string())
+    }
+    //write(file_path, file_content.as_bytes()); 
 }

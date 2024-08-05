@@ -45,10 +45,14 @@ function sanitize() {
 	wordElement.value = wordSanitized;
 }
 function refreshPage() {
-	body.style.opacity = 0;
-	setTimeout(() => {
-		window.open("/waiting", "_self");
-	}, 500);
+	if (nameElement.value != "" && wordElement.value != "") {
+		body.style.opacity = 0;
+		setTimeout(() => {
+			window.open("/waiting", "_self");
+		}, 500);
+	} else {
+		alert("One or more fields are empty");
+	}
 }
 /*function substituteContent() {
 	console.log(body.children[0]);
@@ -63,8 +67,9 @@ function refreshPage() {
 }*/
 function addData() {
 	sanitize();
-	if (isSent == "false") {
-		let data = nameElement.value + "&" + wordElement.value ;
+	console.log(nameElement.value + " " + wordElement.value);
+	if (isSent == "false") {/* && (nameElement.value != "" && wordElement.value != ""))*/ 
+		let data = nameElement.value + "&" + wordElement.value;
 		console.log(data);
 		fetch("/adddata", { 
 			method: "POST", 
@@ -73,20 +78,21 @@ function addData() {
 		localStorage.setItem("isSent", "true");
 	} else {
 		console.log("Not sent");
+		alert(`${nameElement.value} ${wordElement.value}`);
 	}
 }
+/*
 //let socket = localStorage.getItem("webSocket");
 //console.log(socket);
 let socket = new WebSocket(`ws://${socketAddress}`);
 /*if (localStorage.length == 0) {
 	socket = new WebSocket(`ws://${socketAddress}`);
-}*/
+}
 //console.log(Object.keys(socket));
 //localStorage.setItem("webSocket", socket);
 //localStorage.clear();
 socket.onopen = () => {
 	socket.send("Hello from Client");
-	setTimeout(() => {socket.send("delayed")}, 3000);
 }
 socket.onmessage = (message) => {
 	console.log(message.data);
@@ -96,3 +102,6 @@ window.onbeforeunload = () => {
 	socket.close();
 }
 //setInterval(sanitize, 1000);
+*/
+console.log(nameElement.value + " " + wordElement.value);
+isSent = false;
