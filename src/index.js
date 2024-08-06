@@ -68,7 +68,7 @@ function refreshPage() {
 function addData() {
 	sanitize();
 	console.log(nameElement.value + " " + wordElement.value);
-	if (isSent == "false") {/* && (nameElement.value != "" && wordElement.value != ""))*/ 
+	if (isSent == false && nameElement.value != "" && wordElement.value != "") {
 		let data = nameElement.value + "&" + wordElement.value;
 		console.log(data);
 		fetch("/adddata", { 
@@ -104,4 +104,3 @@ window.onbeforeunload = () => {
 //setInterval(sanitize, 1000);
 */
 console.log(nameElement.value + " " + wordElement.value);
-isSent = false;

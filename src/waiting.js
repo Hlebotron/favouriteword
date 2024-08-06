@@ -9,7 +9,7 @@ socket.onopen = async () => {
 	socket.send("Hello from client (but waiting patiently)");
 	let events = await fetch("events");
 	let eventsText = await events.text();
-	console.log(eventsText);
+	console.log("eventstext" + eventsText);
 }
 socket.onmessage = (message) => {
 	let data = document.createElement("li");
@@ -19,13 +19,21 @@ socket.onmessage = (message) => {
 	let command = messageSplit[0];
 	let content = messageSplit[1];
 	switch (command) {
-		case "events":
+		case "word":
 			console.log("New event");
 			console.log(content);
 			break;
 		case "cmd":
 			console.log("New command");
 			console.log(content);
+			break;
+		case "msg":
+			console.log("New message");
+			console.log(content);
+			alert(content);
+			break;
+		case "response":
+			console.log("Response from server");
 			break;
 		default:
 			console.log("Bogus amogus command sent from the server");

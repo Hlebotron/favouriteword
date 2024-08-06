@@ -12,7 +12,6 @@ use std::thread::{self, sleep, Thread, ScopedJoinHandle, spawn};
 use std::time::Duration;
 use futures::{stream::Stream, executor::block_on};
 use ws::{Sender, Factory, Handler, Handshake, WebSocket, listen, Message::{self, Text}, CloseCode};
-use spmc;
 use std::sync::mpsc::channel;
 use rand::{thread_rng, Rng};
 
@@ -54,23 +53,17 @@ struct EventHandler {
 impl Handler for EventHandler {
     fn on_open(&mut self, shake: Handshake) -> Result<(), ws::Error> {
         println!("{info}: Connection has been made, ID: {}", self.id, info = "INFO".green().bold());
-        self.ws.send(format!("Welcome, Client {}", self.id));
         Ok(())
     } 
     fn on_message(&mut self, msg: Message) -> Result<(), ws::Error> {
         println!("{info}: Message received: {msg}", info = "INFO".bold().green());
-        self.ws.send("pog");
+        self.ws.send("response:pog");
         Ok(())
     }
     fn on_close(&mut self, code: CloseCode, reason: &str) {
         println!("{warn}: Connection closed: CODE {code:?} - {reason}", warn = "WARN".yellow().bold());
     }
 }
-/*impl EventHandler {
-    fn broadcast(&mut self) {
-        self.ws.send("broadcast");
-    }
-}*/
 struct HandlerFactory {
     id: u16,
 }
@@ -90,6 +83,8 @@ struct Thread_List<'a> {
 }
 
 pub fn start_server(address: &str, port1: &str, port2: &str, port3: &str) -> Result<(), ()> {
+    delete_file_content(&file("data"));
+    delete_file_content(&file("events"));
     let ip_addr = local_ip().unwrap_or_else(|err| {
         eprintln!("{error}: Could not get local IP address: {}", err, error = "ERROR".red().bold());
         IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
@@ -114,7 +109,7 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
         eprintln!("{error}: Could not start server at {}: {}", &address, err, error = "ERROR".red().bold());
     })?;
     println!("{info}: Control server is up at {}", &control_address.bold().yellow(), info = "INFO".green().bold());
-    let (tx, rx) = channel();
+    let (tx, rx) = channel::<String>();
     thread::scope(|s| {
         let request_thread = s.spawn(move || {
             loop {
@@ -135,7 +130,7 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                         request.as_reader().read_to_string(&mut content).map_err(|err| {
                             eprintln!("{error}: Could not read request content to string: {}", err, error = "ERROR".red().bold())
                         });
-                        post(&content, &format!("{ROOT_DIR}/src/data"));
+                        post(&content, &file("data"));
                     },
                     (Method::Get, "/waiting") => {
                         serve(&file("waiting.html"), request);
@@ -159,53 +154,25 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
             }
         });
         let ws = WebSocket::new(HandlerFactory {id: 0}).unwrap();
-        //println!("{}", listen_ws);
         let broadcast_ws = ws.broadcaster();
         let mut index = 0;
         let listen_thread = s.spawn(move || {
-            /*let split_address: Vec<&str> = address.split(":").collect();
-            let address: &str = split_address[0];
-            let mut port = split_address[1].parse::<u16>().unwrap();
-            port += 1;*/
             let socket_address: String = format!("{address}:{port2}");
-            //let handle = thread::scope(|s| /*-> ScopedJoinHandle<_>*/ {
             let listener = ws.listen(socket_address);
-            //println!("{:?}", websocket.unwrap());
-            /*listen(&socket_address, |socket| {
-                println!("{info}: A connection has been made", info = "INFO".green().bold());
-                move |msg| -> Result<(), ws::Error> {
-                    if msg == Text("Connection closing".to_string()) {
-                        println!("{info}: Connection closed", info = "INFO".green().bold());
-                    } else {
-                        println!("{info}: A message was received: {msg}", info = "INFO".green().bold());
-                        socket.send("Hello from Server")?;
-                    }
-                    Ok(())
-                }
-            });*/
-            //broadcaster.send("pog");
             println!("Not listening anymore");
-            //});
         });
         let broadcast_thread = s.spawn(move || {
-            //let address = address; 
             loop {
                 sleep(Duration::from_millis(100));
                 if let Ok(message) = rx.try_recv() {
-                    broadcast_ws.send(message);
+                    broadcast_ws.send(&*message);
+                    post(&message, &file("events"));
                 }
             }
         });
-        /*let tx_thread = s.spawn(move || {
-            loop {
-                let random: u64 = thread_rng().gen_range(1..=30);
-                let random_string = random.to_string();
-                sleep(Duration::from_secs(random)); 
-                tx.send(&random_string);
-            }
-        });*/
         let control_thread = s.spawn(move || {
-            let mut asking = false;
+            let mut started_asking = false;
+            let mut stopped_asking = false;
             loop {
                 let mut request = control_server.recv().unwrap(); 
                 println!("{comm}: Received request: {}", &request.url(), comm = "CTRL".blue().bold());
@@ -219,23 +186,39 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                     "/favicon.ico" | "/apple-touch-icon.png" => {
                         serve(&file("favicon.ico"), request);
                     },
-                    "/startAsking" => {
-                        if true {
-                            tx.send("cmd:startAsking");
-                            println!("{comm}: Broadcasting: {}", &request.url(), comm = "CTRL".blue().bold());
-                            request.respond(Response::from_string("ok"));
-                            let line = cut_line_from_data();
-                            println!("{}", line.unwrap());
-                        } else {
-                            println!("{comm}: Already started asking", comm = "CTRL".blue().bold());
+                    "/proceed" => {
+                        let line = cut_line_from_data().unwrap_or("".to_string());
+                        if line != "" && started_asking == false && stopped_asking == false { 
+                            tx.send("cmd:startAsking".to_string());
+                            println!("{comm}: Started asking: {}", &request.url(), comm = "CTRL".blue().bold());
+                            started_asking = true;
                         }
-                        asking = true;
-                    },
-                    "/nextWord" => {
-                        println!("Next word requested");
-                        tx.send("events:conga line");
+                        if started_asking == true && stopped_asking == false {
+                            if line != "" { 
+                                tx.send(format!("word:{line}"));
+                            } else {
+                                println!("The file is empty");
+                            }
+                        }
                         request.respond(Response::from_string("ok"));
                     },
+                    "/stopAsking" => {
+                            tx.send("cmd:stopAsking".to_string());
+                            stopped_asking = true;
+                            request.respond(Response::from_string("ok"));
+                    }
+                    "/message" => {
+                        let mut content: String = "".to_string();
+                        request.as_reader().read_to_string(&mut content).map_err(|err| {
+                            eprintln!("{error}: Could not read request content to string: {err}", error = "ERROR".red().bold());
+                            "Unknown".to_string()
+                        });
+                        if &content != "Unknown" { 
+                            tx.send(format!("msg:{content}"));
+                            println!("{info}: Message broadcasted: {content}", info = "INFO".green().bold());
+                        }
+                        request.respond(Response::from_string("ok"));
+                    }
                     _ => { 
                         let mut content: String = "".to_string();
                         request.as_reader().read_to_string(&mut content).map_err(|err| {
@@ -286,11 +269,10 @@ fn post(content: &str, file_path: &str) -> Result<(), ()> {
         Ok(())
     }*/
 fn delete_file_content(file_path: &str) -> Result<(), ()>{
-    let mut file = File::options().write(true).open(file_path).unwrap_or_else(|err| {
+    let mut file = File::options().truncate(true).open(file_path).unwrap_or_else(|err| {
         eprintln!("{error}: Could not open file {}: {}", file_path, err, error = "ERROR".red().bold());
-        File::create("data").unwrap()
+        File::create(file_path).unwrap()
     });
-    write(file_path, "");
     Ok(())
 }
 fn file(file_path: &str) -> String {
@@ -311,9 +293,7 @@ fn cut_line_from_data() -> Result<String, ()>{
     let mut file_lines: Vec<_> = file_content.lines().collect();
     if file_lines.len() > 0 {
         let line_number = thread_rng().gen_range(0..file_lines.len()); 
-        println!("File lines: {:?}", file_lines);
         let line = file_lines.remove(line_number);
-        println!("File lines: {:?}", file_lines);
         let mut file_string = file_lines.join("\n");
         file_string.push_str("\n");
         File::options().write(true).truncate(true).open(file("data")).unwrap_or_else(|err| {
@@ -321,12 +301,8 @@ fn cut_line_from_data() -> Result<String, ()>{
             File::create("data").unwrap()
         });
         file_writer.write(file_string.as_bytes());
-        println!("File string: {}", file_string);
-        println!("Line: {:?}", line);
-        println!("Line number: {:?}", line_number);
-        Ok(file_string)
+        Ok(line.to_string())
     } else {
         Ok("".to_string())
     }
-    //write(file_path, file_content.as_bytes()); 
 }

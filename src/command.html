@@ -4,9 +4,19 @@
 		<title>Game (Command Mode)</title>
 	</head>
 	<body>
-		<h1>Helo</h1>
-		<button onclick="sendCommand('startAsking')">Start Asking</button> 
-		<button onclick="sendCommand('nextWord')">Next Word</button> 
-		<script src="command.js"></script>
+		<h1>Control Panel</h1>
+		<button onclick="fetch('proceed')">Proceed</button> 
+		<input type="text" id="alert" placeholder="Send an alert to everyone" onchange="sendAlert()">
+		<button onclick="fetch('stopAsking')">End session</button>
+		<script>
+			function sendAlert() {
+				let textbox = document.getElementById('alert');
+				fetch('message', {
+					method: "POST",
+					body: textbox.value
+				});
+				textbox.value = "";
+			}
+		</script>
 	</body>
 </html>
