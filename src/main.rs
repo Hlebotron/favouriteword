@@ -16,9 +16,8 @@ use std::sync::mpsc::channel;
 use rand::{thread_rng, Rng};
 
 fn main() {
-    println!("TODO: Fix nextWord down in the controls section (Including converting to JSON)");
     if ROOT_DIR == "" {
-        println!("Please specify the root directory in 'main.rs'");
+        println!("Please specify the root directory in 'main.rs' (ROOT_DIR)");
         exit(1) }
     let args: Vec<String> = args().collect();
     let success = match args.len() {
@@ -40,9 +39,9 @@ fn main() {
 fn usage() {
     println!(r#"
 USAGE:
-    cargo run <ip address>
+    cargo run <ip address> <server port>
 
-NOTE: The WebSocket and Command server each take up 1 port (eg. if you set the port to 6969, 6970 and 6971 will also be taken up), so distance each instance of this server by at least 3 ports
+NOTE: The server, WebSocket and command server each take up 1 port (eg. if you set the server port to 6969, 6970 and 6971 will also be taken up), so distance each instance of this server by at least 3 ports
 "#);
 }
 
@@ -78,12 +77,10 @@ impl Factory for HandlerFactory {
         handler
     }
 }
-struct Thread_List<'a> {
-    list: Vec<ScopedJoinHandle<'a, ()>>,
-}
 
-pub fn start_server(address: &str, port1: &str, port2: &str, port3: &str) -> Result<(), ()> {
+fn start_server(address: &str, port1: &str, port2: &str, port3: &str) -> Result<(), ()> {
     delete_file_content(&file("data"));
+    delete_file_content(&file("answerData"));
     delete_file_content(&file("events"));
     let ip_addr = local_ip().unwrap_or_else(|err| {
         eprintln!("{error}: Could not get local IP address: {}", err, error = "ERROR".red().bold());
@@ -109,9 +106,9 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
         eprintln!("{error}: Could not start server at {}: {}", &address, err, error = "ERROR".red().bold());
     })?;
     println!("{info}: Control server is up at {}", &control_address.bold().yellow(), info = "INFO".green().bold());
-    let (tx, rx) = channel::<String>();
+    let (tx, rx) = channel::<(String, bool)>();
     thread::scope(|s| {
-        let request_thread = s.spawn(move || {
+        s.spawn(move || { /*Request Thread*/
             loop {
                 let mut request = server.recv().unwrap(); 
                 println!("{info}: Received request: {} {}", &request.method(), &request.url(), info = "INFO".green().bold());
@@ -125,21 +122,23 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                     (Method::Get, "/favicon.ico") | (Method::Get, "/apple-touch-icon.png") => {
                         serve(&file("favicon.ico"), request);
                     },
-                    (Method::Post, "/adddata") => {
-                        let mut content: String = "".to_string();
-                        request.as_reader().read_to_string(&mut content).map_err(|err| {
-                            eprintln!("{error}: Could not read request content to string: {}", err, error = "ERROR".red().bold())
-                        });
+                    (Method::Post, "/addData") => {
+                        let content = read_request_content(&mut request);
                         post(&content, &file("data"));
                     },
-                    (Method::Get, "/waiting") => {
-                        serve(&file("waiting.html"), request);
+                    (Method::Get, "/asking") => {
+                        serve(&file("asking.html"), request);
                     },
-                    (Method::Get, "/waiting.js") => {
-                        serve(&file("waiting.js"), request);
+                    (Method::Get, "/asking.js") => {
+                        serve(&file("asking.js"), request);
                     },
                     (Method::Get, "/events") => {
                         serve(&file("events"), request);
+                    },
+                    (Method::Post, "/addAnswerData") => {
+                        let content = read_request_content(&mut request);
+                        request.respond(Response::from_string("ok"));
+                        post(&content, &file("answerData"));
                     },
                     _ => { 
                         let mut content: String = "".to_string();
@@ -155,23 +154,23 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
         });
         let ws = WebSocket::new(HandlerFactory {id: 0}).unwrap();
         let broadcast_ws = ws.broadcaster();
-        let mut index = 0;
-        let listen_thread = s.spawn(move || {
+        s.spawn(move || { /*Listener Thread*/
             let socket_address: String = format!("{address}:{port2}");
             let listener = ws.listen(socket_address);
             println!("Not listening anymore");
         });
-        let broadcast_thread = s.spawn(move || {
+        s.spawn(move || { /*Broadcast Thread*/
             loop {
                 sleep(Duration::from_millis(100));
-                if let Ok(message) = rx.try_recv() {
+                if let Ok((message, send)) = rx.try_recv() {
                     broadcast_ws.send(&*message);
-                    post(&message, &file("events"));
+                    if send {
+                        post(&message, &file("events"));
+                    }
                 }
             }
         });
-        let control_thread = s.spawn(move || {
-            let mut started_asking = false;
+        s.spawn(move || { /*Control Thread*/ 
             let mut stopped_asking = false;
             loop {
                 let mut request = control_server.recv().unwrap(); 
@@ -188,22 +187,14 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                     },
                     "/proceed" => {
                         let line = cut_line_from_data().unwrap_or("".to_string());
-                        if line != "" && started_asking == false && stopped_asking == false { 
-                            tx.send("cmd:startAsking".to_string());
-                            println!("{comm}: Started asking: {}", &request.url(), comm = "CTRL".blue().bold());
-                            started_asking = true;
-                        }
-                        if started_asking == true && stopped_asking == false {
-                            if line != "" { 
-                                tx.send(format!("word:{line}"));
-                            } else {
-                                println!("The file is empty");
-                            }
+                        if line != "" && !stopped_asking {
+                            tx.send((format!("word:{line}"), true));
+                            delete_file_content(&file("answerData"));
                         }
                         request.respond(Response::from_string("ok"));
                     },
                     "/stopAsking" => {
-                            tx.send("cmd:stopAsking".to_string());
+                            tx.send(("cmd:stopAsking".to_string(), true));
                             stopped_asking = true;
                             request.respond(Response::from_string("ok"));
                     }
@@ -214,11 +205,17 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                             "Unknown".to_string()
                         });
                         if &content != "Unknown" { 
-                            tx.send(format!("msg:{content}"));
-                            println!("{info}: Message broadcasted: {content}", info = "INFO".green().bold());
+                            tx.send((format!("msg:{content}"), false));
                         }
                         request.respond(Response::from_string("ok"));
-                    }
+                    },
+                    "/getAnswerData" => {
+                        serve(&file("answerData"), request);
+                    },
+                    "/reset" => {
+                        tx.send(("cmd:reset".to_string(), true));
+                        request.respond(Response::from_string("ok"));
+                    },
                     _ => { 
                         let mut content: String = "".to_string();
                         request.as_reader().read_to_string(&mut content).map_err(|err| {
@@ -242,7 +239,6 @@ fn serve(path: &str, request: Request) -> Result<(), ()> {
     request.respond(Response::from_file(file?)).map_err(|err| {
         eprintln!("{error}: Could not respond to client: {}", err, error = "ERROR".red().bold());
     });
-    println!("{info}: File served: {}", path, info = "INFO".green().bold());
     Ok(())
 }
 
@@ -268,12 +264,11 @@ fn post(content: &str, file_path: &str) -> Result<(), ()> {
         write(file_path, file_content.as_bytes()); 
         Ok(())
     }*/
-fn delete_file_content(file_path: &str) -> Result<(), ()>{
-    let mut file = File::options().truncate(true).open(file_path).unwrap_or_else(|err| {
+fn delete_file_content(file_path: &str){
+    File::options().truncate(true).open(file_path).unwrap_or_else(|err| {
         eprintln!("{error}: Could not open file {}: {}", file_path, err, error = "ERROR".red().bold());
         File::create(file_path).unwrap()
     });
-    Ok(())
 }
 fn file(file_path: &str) -> String {
     let path = format!("{ROOT_DIR}/src/{file_path}");
@@ -305,4 +300,12 @@ fn cut_line_from_data() -> Result<String, ()>{
     } else {
         Ok("".to_string())
     }
+}
+///Get the content of a request
+fn read_request_content(request: &mut Request) -> String {
+    let mut content: String = "".to_string();
+    request.as_reader().read_to_string(&mut content).map_err(|err| {
+        eprintln!("{error}: Could not read request content to string: {}", err, error = "ERROR".red().bold())
+    });
+    content
 }

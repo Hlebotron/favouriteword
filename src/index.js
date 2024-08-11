@@ -6,6 +6,19 @@ const address = window.location.href.split("//").at(1).split(":").at(0);
 const port = Number(window.location.href.split("//").at(1).split(":").at(1).split("/").at(0)) + 1;
 const socketAddress = `${address}:${port}`;
 
+let socket = new WebSocket(`ws://${socketAddress}`);
+socket.onopen = () => {
+	socket.send("Hello from client");
+} 
+socket.onmessage = (message) => {
+	let splitMessage = message.data.split(":");	
+	let command = splitMessage[0];
+	let content = splitMessage[1];
+	if (command == "msg") {
+		alert(content);
+	}
+}
+
 let isSent = localStorage.getItem("isSent");
 if (isSent == null) {
 	localStorage.setItem("isSent", "false");
@@ -18,6 +31,8 @@ function sanitize() {
 	
 	let name = nameElement.value;
 	let word = wordElement.value;
+	
+	
 
 	let nameSplit = name.split('');
 	let nameSanitized = "";
@@ -48,30 +63,20 @@ function refreshPage() {
 	if (nameElement.value != "" && wordElement.value != "") {
 		body.style.opacity = 0;
 		setTimeout(() => {
-			window.open("/waiting", "_self");
+			window.open("/asking", "_self");
 		}, 500);
 	} else {
 		alert("One or more fields are empty");
 	}
 }
-/*function substituteContent() {
-	console.log(body.children[0]);
-	for (let i = 0; i < body.children.length;) {
-		body.removeChild(body.children[i]);
-	}
-	console.log(body.children[0]);
-	let title = document.createElement("h1");
-		title.innerHTML = "Please wait...";
-		body.appendChild(title);
-	//let html = fetch("/waiting.html", method: "GET");
-}*/
 function addData() {
+	//alert(removeAmpersand("name"));
 	sanitize();
 	console.log(nameElement.value + " " + wordElement.value);
-	if (isSent == false && nameElement.value != "" && wordElement.value != "") {
+	if (isSent == "false" && nameElement.value != "" && wordElement.value != "") {
 		let data = nameElement.value + "&" + wordElement.value;
 		console.log(data);
-		fetch("/adddata", { 
+		fetch("/addData", { 
 			method: "POST", 
 			body: data
 		});
@@ -81,26 +86,19 @@ function addData() {
 		alert(`${nameElement.value} ${wordElement.value}`);
 	}
 }
-/*
-//let socket = localStorage.getItem("webSocket");
-//console.log(socket);
-let socket = new WebSocket(`ws://${socketAddress}`);
-/*if (localStorage.length == 0) {
-	socket = new WebSocket(`ws://${socketAddress}`);
+function removeAmpersand(elementId) {
+	let elementValue = document.getElementById(elementId).value;
+	let split = elementValue.split('');
+	let sanitized = "";
+	console.log(sanitized);
+	for (i = 0; i < split.length;) {
+		if (split[i] == '&') {
+			split.splice(i, 1);
+		} else {
+			sanitized += split[i];
+			i++;
+		}
+	}
+	console.debug(sanitized);
+	return sanitized;
 }
-//console.log(Object.keys(socket));
-//localStorage.setItem("webSocket", socket);
-//localStorage.clear();
-socket.onopen = () => {
-	socket.send("Hello from Client");
-}
-socket.onmessage = (message) => {
-	console.log(message.data);
-	document.getElementById("serverEvent").innerHTML = message.data;
-}
-window.onbeforeunload = () => {
-	socket.close();
-}
-//setInterval(sanitize, 1000);
-*/
-console.log(nameElement.value + " " + wordElement.value);
