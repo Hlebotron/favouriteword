@@ -2,31 +2,11 @@
 <html>
 	<head>
 		<title>Game</title>
-		<style>
-			* {
-				transition: opacity 0.25s ease-in-out;
-				font-size: 30px;
-			}
-			input {
-				width: 90%;
-				height: 100px;
-				margin: 20px;
-			}
-			button {
-				height: 100px;
-				width: 10%;
-			}
-			#input {
-				display: flex;
-				flex-direction: column;
-				justify-content: center;
-			}
-		</style>
+		<link href="style.css" rel="stylesheet">
 	</head>
-	<body>
+	<body class="div">
 		<h1>Favourite word</h1>
-		<p id="serverEvent">Placeholder</p>
-		<div id="input">
+		<div class="" id="input">
 			<input type="text" name="name" id="name" placeholder="Name">
 			<input type="text" name="word" id="word" placeholder="Word of Choice">
 			<button id="submit" onclick="addData(); refreshPage()">Submit</button>

@@ -119,6 +119,9 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                     (Method::Get, "/index.js") => {
                         serve(&file("index.js"), request);
                     },
+                    (Method::Get, "/style.css") => {
+                        serve(&file("/style.css"), request);
+                    },
                     (Method::Get, "/favicon.ico") | (Method::Get, "/apple-touch-icon.png") => {
                         serve(&file("favicon.ico"), request);
                     },
@@ -266,7 +269,7 @@ fn post(content: &str, file_path: &str) -> Result<(), ()> {
     }*/
 fn delete_file_content(file_path: &str){
     File::options().truncate(true).open(file_path).unwrap_or_else(|err| {
-        eprintln!("{error}: Could not open file {}: {}", file_path, err, error = "ERROR".red().bold());
+        //eprintln!("{error}: Could not open file {}: {}", file_path, err, error = "ERROR".red().bold());
         File::create(file_path).unwrap()
     });
 }

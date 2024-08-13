@@ -28,11 +28,8 @@ if (isSent == null) {
 console.log(isSent);
 
 function sanitize() {
-	
 	let name = nameElement.value;
 	let word = wordElement.value;
-	
-	
 
 	let nameSplit = name.split('');
 	let nameSanitized = "";
@@ -102,3 +99,4 @@ function removeAmpersand(elementId) {
 	console.debug(sanitized);
 	return sanitized;
 }
+body.style.opacity = 1;

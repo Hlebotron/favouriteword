@@ -2,28 +2,22 @@
 <html>
 	<head>
 		<title>Game</title>
-		<style>
-			.absolute {
-				position: absolute;
-				opacity: 0;
-				transition: opacity 0.25s ease-in-out;
-			}
-		</style>
+		<link rel="stylesheet" href="style.css">
 	</head>
 	<body>
-		<div class="absolute" id="waiting">
+		<div class="div" id="waiting">
 			<h1>Please wait</h1>
 			<p id="messages"></p>
 			<p id="answerDisplay"></p>
 		</div>
-		<div class="absolute" id="asking">
+		<div class="div" id="asking">
 			<h1>Questions</h1>
 			<h2 id="word">THE WORD IS [money]</h2>
 			<h2>Who wrote it?</h2>
 			<input type="text" id="clientAnswer" placeholder="Type your guess">
 			<button id="submit" onclick="submitAnswer()">Submit</button>	
 		</div>
-		<div class="absolute" id="end">
+		<div class="div" id="end">
 			<h1>Thank you for your participation</h1>
 		</div>
 		<script src="asking.js"></script>

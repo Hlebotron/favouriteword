@@ -1,0 +1,28 @@
+* {
+	font-size: 30px;
+	transition: opacity 0.25s ease-in-out;
+}
+body {
+	background-color: #223;
+	color: #fff;
+}
+.div {
+	position: absolute;
+	opacity: 0;
+	display: flex;
+}
+input {
+	width: 90%;
+	height: 100px;
+	margin: 20px;
+}
+button {
+	height: 100px;
+	width: 20%;
+}
+div #input {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
