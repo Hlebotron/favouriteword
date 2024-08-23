@@ -10,13 +10,13 @@ const socketAddress = `${address}:${port}`;
 console.log(socketAddress);
 let socket = new WebSocket(`ws://${socketAddress}`);
 let startAsking = false;
-let stopAsking = false;
 let isWaiting = localStorage.getItem("isWaiting");
 if (isWaiting == null) {
 	localStorage.setItem("isWaiting", "true");
 	isWaiting = "true";
 }
 let word = "";
+let name = "";
 let isSent = localStorage.getItem("isSent");
 if (isSent == null) {
 	localStorage.setItem("isSent", "false");
@@ -36,22 +36,20 @@ socket.onopen = async () => {
 			console.log("empty");
 			continue;
 		}
-		console.log("eventLine: " + eventLine);
 		let splitEvent = eventLine.split(":");
 		let command = splitEvent[0];
 		let content = splitEvent[1];
 		switch (command) {
 			case "word":
 				console.log("New word: " + content);
-				word = content;
+				let splitContent = content.split("&");
+				name = splitContent.at(0);
+				word = splitContent.at(1);
 				startAsking = true;
 				break;
 			case "cmd":
 				console.log("New command: " + content);
 				switch (content) {
-					case "stopAsking":
-						stopAsking = true;
-						break;
 					case "reset":
 						localStorage.clear();
 						break;
@@ -66,7 +64,7 @@ socket.onopen = async () => {
 	//console.log("startAsking: " + startAsking);
 	//console.log("stopAsking: " + stopAsking);
 	if (isWaiting == "false") {
-		if (isWaiting == "false" && !stopAsking) {
+		if (isWaiting == "false") {
 			asking.style.opacity = 1;
 			wordElement.innerHTML = "The word is: " + word;
 		} else {
@@ -83,14 +81,15 @@ socket.onopen = async () => {
 socket.onmessage = (message) => {
 	let data = document.createElement("li");
 	data.innerHTML = message.data;
-	messages.appendChild(data);
 	let messageSplit = message.data.split(":");
 	let command = messageSplit[0];
 	let content = messageSplit[1];
 	switch (command) {
 		case "word":
 			console.log("New word: " + content);
-			word = content;
+			let splitContent = content.split("&");
+			name = splitContent.at(0);
+			word = splitContent.at(1);
 			document.getElementById("word").innerHTML = "The word is: " + word;
 			startAsking = true;
 			waiting.style.opacity = 0;
@@ -102,11 +101,6 @@ socket.onmessage = (message) => {
 		case "cmd":
 			console.log("New command: " + content);
 			switch (content) {
-				case "stopAsking":
-					asking.opacity = 0;
-					setTimeout(() => document.getElementById("end").style.opacity = 1, 250);
-					stopAsking = true;
-					break;
 				case "reset":
 					localStorage.clear();
 					break;

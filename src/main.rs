@@ -24,7 +24,8 @@ fn main() {
         3 => {
             let port2 = (&args[2].parse::<u16>().expect("Not a number") + 1).to_string();
             let port3 = (&args[2].parse::<u16>().expect("Not a number") + 2).to_string();
-            start_server(&args[1], &args[2], &port2, &port3)
+            let port4 = (&args[2].parse::<u16>().expect("Not a number") + 3).to_string();
+            start_server(&args[1], &args[2], &port2, &port3, &port4)
         },
         _ => {
             usage();
@@ -78,7 +79,7 @@ impl Factory for HandlerFactory {
     }
 }
 
-fn start_server(address: &str, port1: &str, port2: &str, port3: &str) -> Result<(), ()> {
+fn start_server(address: &str, port1: &str, port2: &str, port3: &str, port4: &str) -> Result<(), ()> {
     delete_file_content(&file("data"));
     delete_file_content(&file("answerData"));
     delete_file_content(&file("events"));
@@ -86,15 +87,15 @@ fn start_server(address: &str, port1: &str, port2: &str, port3: &str) -> Result<
         eprintln!("{error}: Could not get local IP address: {}", err, error = "ERROR".red().bold());
         IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
     }).to_string();
-    run_server(address, port1, port2, port3, ROOT_DIR).or_else(|_|{
-        run_server(&ip_addr, port1, port2, port3, ROOT_DIR)
+    run_server(address, port1, port2, port3, port4, ROOT_DIR).or_else(|_|{
+        run_server(&ip_addr, port1, port2, port3, port4, ROOT_DIR)
     }).or_else(|err| {
         eprintln!("{fatal_error}: Could not start server", fatal_error = "FATAL ERROR".red().bold());
         Err(())
     });
     Ok(())
 }
-fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &str) -> Result<(), ()> {
+fn run_server(address: &str, port1: &str, port2: &str, port3: &str, port4: &str, directory: &str) -> Result<(), ()> {
     let server_address = format!("{address}:{port1}");
     let server = Server::http(&server_address).map_err(|err| {
         eprintln!("{error}: Could not start server at {}: {}", &address, err, error = "ERROR".red().bold());
@@ -107,8 +108,9 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
     })?;
     println!("{info}: Control server is up at {}", &control_address.bold().yellow(), info = "INFO".green().bold());
     let (tx, rx) = channel::<(String, bool)>();
+    let (ctx, crx) = channel::<String>();
     thread::scope(|s| {
-        s.spawn(move || { /*Request Thread*/
+        s.spawn(move || { //Client Thread
             loop {
                 let mut request = server.recv().unwrap(); 
                 println!("{info}: Received request: {} {}", &request.method(), &request.url(), info = "INFO".green().bold());
@@ -151,18 +153,26 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                         });
                         eprintln!("{error}: Invalid request {}, content: {}",  request.url(), content, error = "ERROR".red().bold());
                         request.respond(Response::from_string("404"));
+                        ctx.send("alert:error".to_string());
                     },
                 }
             }
         });
         let ws = WebSocket::new(HandlerFactory {id: 0}).unwrap();
         let broadcast_ws = ws.broadcaster();
-        s.spawn(move || { /*Listener Thread*/
+        let cws = WebSocket::new(HandlerFactory {id: 0}).unwrap();
+        let cbroadcast_ws = cws.broadcaster();
+        s.spawn(move || { //Listener Thread
             let socket_address: String = format!("{address}:{port2}");
             let listener = ws.listen(socket_address);
             println!("Not listening anymore");
         });
-        s.spawn(move || { /*Broadcast Thread*/
+        s.spawn(move || { //Control Listener Thread
+            let socket_address: String = format!("{address}:{port4}");
+            let listener = cws.listen(socket_address);
+            println!("Not listening anymore");
+        });
+        s.spawn(move || { //Broadcast Thread
             loop {
                 sleep(Duration::from_millis(100));
                 if let Ok((message, send)) = rx.try_recv() {
@@ -171,10 +181,13 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                         post(&message, &file("events"));
                     }
                 }
+                if let Ok(message) = crx.try_recv() {
+                    cbroadcast_ws.send(&*message);
+                }
             }
+            println!("Stopped broadcasting");
         });
-        s.spawn(move || { /*Control Thread*/ 
-            let mut stopped_asking = false;
+        s.spawn(move || { //Control Thread
             loop {
                 let mut request = control_server.recv().unwrap(); 
                 println!("{comm}: Received request: {}", &request.url(), comm = "CTRL".blue().bold());
@@ -190,17 +203,12 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, directory: &
                     },
                     "/proceed" => {
                         let line = cut_line_from_data().unwrap_or("".to_string());
-                        if line != "" && !stopped_asking {
+                        if line != ""  {
                             tx.send((format!("word:{line}"), true));
                             delete_file_content(&file("answerData"));
                         }
                         request.respond(Response::from_string("ok"));
                     },
-                    "/stopAsking" => {
-                            tx.send(("cmd:stopAsking".to_string(), true));
-                            stopped_asking = true;
-                            request.respond(Response::from_string("ok"));
-                    }
                     "/message" => {
                         let mut content: String = "".to_string();
                         request.as_reader().read_to_string(&mut content).map_err(|err| {

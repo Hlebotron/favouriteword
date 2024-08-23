@@ -7,37 +7,7 @@
 		<h1>Control Panel</h1>
 		<button onclick="fetch('proceed')">Proceed</button> 
 		<input type="text" id="alert" placeholder="Send an alert to everyone" onchange="sendAlert()">
-		<button onclick="fetch('stopAsking')">End session</button>
 		<button onclick="fetch('reset')">Clear local storage</button>
-		<script>
-			function sendAlert() {
-				let textbox = document.getElementById('alert');
-				fetch('message', {
-					method: "POST",
-					body: textbox.value
-				});
-				textbox.value = "";
-			}
-			const ipSplit = window.location.href.split("//").at(1).split(":");
-			const address = ipSplit.at(0);
-			const port = Number(ipSplit.at(1).slice(0, -1)) - 1;
-			const socketAddress = `${address}:${port}`;
-			let socket = new WebSocket(`ws://${socketAddress}`);
-			socket.onopen = async () => {
-				socket.send("pog");
-				let events = await fetch("getAnswerData");
-				let eventsText = await events.text();
-				console.log("eventstext" + eventsText);
-				let eventLines = eventsText.split("\n");
-				for (i = 0; i < eventLines.length; i++) {
-					let eventLine = eventLines[i];
-					if (eventLine == "") { 
-						console.log("empty");
-						continue;
-					}
-					console.log("eventLine: " + eventLine);
-				}
-			}
-		</script>
+		<script src="command.js"></script>
 	</body>
 </html>

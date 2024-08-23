@@ -3,13 +3,15 @@
 	transition: opacity 0.25s ease-in-out;
 }
 body {
-	background-color: #223;
+	background: linear-gradient(to top, #337, #88C);
 	color: #fff;
+	height: 100vh;
 }
 .div {
 	position: absolute;
 	opacity: 0;
 	display: flex;
+	flex-direction: column;
 }
 input {
 	width: 90%;
@@ -20,7 +22,7 @@ button {
 	height: 100px;
 	width: 20%;
 }
-div #input {
+#input {
 	display: flex;
 	flex-direction: column;
 	justify-content: center;

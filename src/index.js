@@ -80,7 +80,7 @@ function addData() {
 		localStorage.setItem("isSent", "true");
 	} else {
 		console.log("Not sent");
-		alert(`${nameElement.value} ${wordElement.value}`);
+		alert("Not sent");
 	}
 }
 function removeAmpersand(elementId) {
