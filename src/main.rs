@@ -1,4 +1,4 @@
-const ROOT_DIR: &str = "";
+const ROOT_DIR: &str = ".";
 
 use std::process::exit;
 use std::env::args;
@@ -16,6 +16,7 @@ use std::sync::mpsc::channel;
 use rand::{thread_rng, Rng};
 
 fn main() {
+    println!("TODO: Wrong page at asking (when reloading)");
     if ROOT_DIR == "" {
         println!("Please specify the root directory in 'main.rs' (ROOT_DIR)");
         exit(1) }
@@ -188,6 +189,7 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, port4: &str,
             println!("Stopped broadcasting");
         });
         s.spawn(move || { //Control Thread
+            let mut word_revealed = true;
             loop {
                 let mut request = control_server.recv().unwrap(); 
                 println!("{comm}: Received request: {}", &request.url(), comm = "CTRL".blue().bold());
@@ -202,12 +204,18 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, port4: &str,
                         serve(&file("favicon.ico"), request);
                     },
                     "/proceed" => {
-                        let line = cut_line_from_data().unwrap_or("".to_string());
-                        if line != ""  {
-                            tx.send((format!("word:{line}"), true));
-                            delete_file_content(&file("answerData"));
+                        if word_revealed {
+                            let line = cut_line_from_data().unwrap_or("".to_string());
+                            if line != "" {
+                                tx.send((format!("word:{line}"), true));
+                                delete_file_content(&file("answerData"));
+                                word_revealed = false;
+                            }
+                        } else {
+                            tx.send(("cmd:reveal".to_string(), true));
+                            word_revealed = true;
                         }
-                        request.respond(Response::from_string("ok"));
+                        request.respond(Response::from_string(word_revealed.to_string()));
                     },
                     "/message" => {
                         let mut content: String = "".to_string();

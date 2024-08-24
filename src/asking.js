@@ -3,6 +3,7 @@ const answer = document.getElementById("clientAnswer");
 const asking = document.getElementById("asking");
 const wordElement = document.getElementById("word");
 const waiting = document.getElementById("waiting");
+const realAnswer = document.getElementById("realAnswer");
 
 const address = window.location.href.split("//").at(1).split(":").at(0);         
 const port = Number(window.location.href.split("//").at(1).split(":").at(1).split("/").at(0)) + 1;
@@ -24,6 +25,15 @@ if (isSent == null) {
 }
 console.log("isSent: " + isSent);
 let clientAnswer = "";
+let clientAnswerLS = localStorage.getItem("clientAnswer");
+switch (clientAnswerLS) {
+	case null: case undefined: case "":
+		break;
+	default:
+		clientAnswer = clientAnswerLS;
+		break;
+
+}
 socket.onopen = async () => {
 	socket.send("Hello from client (but waiting patiently)");
 	let events = await fetch("events");
@@ -46,12 +56,16 @@ socket.onopen = async () => {
 				name = splitContent.at(0);
 				word = splitContent.at(1);
 				startAsking = true;
+				realAnswer.innerHTML = "";
 				break;
 			case "cmd":
 				console.log("New command: " + content);
 				switch (content) {
 					case "reset":
 						localStorage.clear();
+						break;
+					case "reveal":
+						realAnswer.innerHTML = name;
 						break;
 				}
 				break;
@@ -63,7 +77,7 @@ socket.onopen = async () => {
 	}
 	//console.log("startAsking: " + startAsking);
 	//console.log("stopAsking: " + stopAsking);
-	if (isWaiting == "false") {
+	if (isWaiting == "false" && clientAnswer != "") {
 		if (isWaiting == "false") {
 			asking.style.opacity = 1;
 			wordElement.innerHTML = "The word is: " + word;
@@ -73,7 +87,7 @@ socket.onopen = async () => {
 		}
 	} else {
 		waiting.style.opacity = 1;
-		if (startAsking) {
+		if (startAsking && clientAnswer != "") {
 			document.getElementById("answerDisplay").innerHTML = "Your answer is: " + clientAnswer;
 		}
 	}
@@ -97,12 +111,16 @@ socket.onmessage = (message) => {
 			isWaiting = "false";
 			localStorage.setItem("isWaiting", "false");
 			isSent = "false";
+			realAnswer.innerHTML = "";
 			break;
 		case "cmd":
 			console.log("New command: " + content);
 			switch (content) {
 				case "reset":
 					localStorage.clear();
+					break;
+				case "reveal":
+					realAnswer.innerHTML = name;
 					break;
 			}
 			break;
@@ -126,6 +144,7 @@ function submitAnswer() {
 			fetch("addAnswerData", {body: answer, method: "POST"});
 			isSent = "true";
 			localStorage.setItem("isSent", "true");
+			localStorage.setItem("clientAnswer", answer);
 			console.log("sent");
 			break;
 		case "true":
