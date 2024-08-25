@@ -3,7 +3,8 @@ const answer = document.getElementById("clientAnswer");
 const asking = document.getElementById("asking");
 const wordElement = document.getElementById("word");
 const waiting = document.getElementById("waiting");
-const realAnswer = document.getElementById("realAnswer");
+const realAnswer1 = document.getElementById("realAnswer1");
+const realAnswer2 = document.getElementById("realAnswer2");
 
 const address = window.location.href.split("//").at(1).split(":").at(0);         
 const port = Number(window.location.href.split("//").at(1).split(":").at(1).split("/").at(0)) + 1;
@@ -56,7 +57,8 @@ socket.onopen = async () => {
 				name = splitContent.at(0);
 				word = splitContent.at(1);
 				startAsking = true;
-				realAnswer.innerHTML = "";
+				realAnswer1.innerHTML = "";
+				realAnswer2.innerHTML = "";
 				break;
 			case "cmd":
 				console.log("New command: " + content);
@@ -65,7 +67,8 @@ socket.onopen = async () => {
 						localStorage.clear();
 						break;
 					case "reveal":
-						realAnswer.innerHTML = name;
+						realAnswer1.innerHTML = name;
+						realAnswer2.innerHTML = name;
 						break;
 				}
 				break;
@@ -111,7 +114,8 @@ socket.onmessage = (message) => {
 			isWaiting = "false";
 			localStorage.setItem("isWaiting", "false");
 			isSent = "false";
-			realAnswer.innerHTML = "";
+			realAnswer1.innerHTML = "";
+			realAnswer2.innerHTML = "";
 			break;
 		case "cmd":
 			console.log("New command: " + content);
@@ -120,7 +124,8 @@ socket.onmessage = (message) => {
 					localStorage.clear();
 					break;
 				case "reveal":
-					realAnswer.innerHTML = name;
+					realAnswer1.innerHTML = name;
+					realAnswer2.innerHTML = name;
 					break;
 			}
 			break;
