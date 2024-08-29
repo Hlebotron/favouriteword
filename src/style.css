@@ -1,26 +1,40 @@
 * {
-	font-size: 30px;
+	font-size: 50px;
+	font-family: "Iosevka Nerf Font", "Noto Sans Mono", monospace;
 	transition: opacity 0.25s ease-in-out;
 }
 body {
 	background: linear-gradient(to top, #337, #88C);
 	color: #fff;
 	height: 100vh;
+	text-align: center;
+	background-attachment: fixed;
+	width: 100%;
+}
+p {
+	font-size: 30px;
 }
 .div {
-	position: absolute;
 	opacity: 0;
 	display: flex;
 	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	width: 96%;
+	margin: 2%;
 }
-input {
+input, textarea {
 	width: 90%;
 	height: 100px;
 	margin: 20px;
+	text-align: center;
+}
+textarea {
+	height: 200px;
 }
 button {
 	height: 100px;
-	width: 20%;
+	width: 30%;
 }
 #input {
 	display: flex;

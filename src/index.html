@@ -1,16 +1,16 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<title>Game</title>
+		<title>Találd ki!</title>
 		<link href="style.css" rel="stylesheet">
+		<meta charset="UTF-8">
 	</head>
 	<body class="div">
-		<h1>Favourite word</h1>
-		<div id="input">
-			<input type="text" name="name" id="name" placeholder="Name">
-			<input type="text" name="word" id="word" placeholder="Word of Choice">
-			<button id="submit" onclick="addData(); refreshPage()">Submit</button>
-		</div>
+		<h1>Találd ki!</h1>
+		<p>Írd be a (bece)neved az első rublikába, utána egy picit magadról a másodikba</p>
+		<input type="text" name="name" id="name" placeholder="Név">
+		<textarea id="desc" placeholder="Leírás"></textarea>
+		<button id="submit" onclick="addData(); refreshPage()">Küldés</button>
 		<script src="index.js"></script>
 	</body>
 </html>

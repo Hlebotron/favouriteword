@@ -1,7 +1,8 @@
 const messages = document.getElementById("messages");
 const answer = document.getElementById("clientAnswer");
 const asking = document.getElementById("asking");
-const wordElement = document.getElementById("word");
+const wordDisplay1 = document.getElementById("wordDisplay1");
+const wordDisplay2 = document.getElementById("wordDisplay2");
 const waiting = document.getElementById("waiting");
 const realAnswer1 = document.getElementById("realAnswer1");
 const realAnswer2 = document.getElementById("realAnswer2");
@@ -55,7 +56,8 @@ socket.onopen = async () => {
 				console.log("New word: " + content);
 				let splitContent = content.split("&");
 				name = splitContent.at(0);
-				word = splitContent.at(1);
+				word = formatNewLines(splitContent.at(1));
+				console.log(word);
 				startAsking = true;
 				realAnswer1.innerHTML = "";
 				realAnswer2.innerHTML = "";
@@ -63,12 +65,9 @@ socket.onopen = async () => {
 			case "cmd":
 				console.log("New command: " + content);
 				switch (content) {
-					case "reset":
-						localStorage.clear();
-						break;
 					case "reveal":
-						realAnswer1.innerHTML = name;
-						realAnswer2.innerHTML = name;
+						realAnswer1.innerHTML = "A helyes válasz: " + name;
+						realAnswer2.innerHTML = "A helyes válasz: " + name;
 						break;
 				}
 				break;
@@ -80,18 +79,22 @@ socket.onopen = async () => {
 	}
 	//console.log("startAsking: " + startAsking);
 	//console.log("stopAsking: " + stopAsking);
+	console.log("Word: " + word);
 	if (isWaiting == "false" && clientAnswer != "") {
 		if (isWaiting == "false") {
 			asking.style.opacity = 1;
-			wordElement.innerHTML = "The word is: " + word;
+			wordDisplay1.innerHTML =  word;
+			wordDisplay2.innerHTML =  word;
 		} else {
-			alert("Thank you for participating");
+			alert("Köszönöm szépen a résztvételt");
 			document.getElementById("end").style.opacity = 1;
 		}
 	} else {
 		waiting.style.opacity = 1;
 		if (startAsking && clientAnswer != "") {
-			document.getElementById("answerDisplay").innerHTML = "Your answer is: " + clientAnswer;
+			document.getElementById("answerDisplay").innerHTML = "A válaszod: " + clientAnswer;
+			wordDisplay1.innerHTML = word;
+			wordDisplay2.innerHTML = word;
 		}
 	}
 }
@@ -106,8 +109,10 @@ socket.onmessage = (message) => {
 			console.log("New word: " + content);
 			let splitContent = content.split("&");
 			name = splitContent.at(0);
-			word = splitContent.at(1);
-			document.getElementById("word").innerHTML = "The word is: " + word;
+			word = formatNewLines(splitContent.at(1));
+			console.log(word);
+			document.getElementById("wordDisplay1").innerHTML =  word;
+			document.getElementById("wordDisplay2").innerHTML =  word;
 			startAsking = true;
 			waiting.style.opacity = 0;
 			setTimeout(() => document.getElementById("asking").style.opacity = 1, 250);
@@ -124,8 +129,8 @@ socket.onmessage = (message) => {
 					localStorage.clear();
 					break;
 				case "reveal":
-					realAnswer1.innerHTML = name;
-					realAnswer2.innerHTML = name;
+					realAnswer1.innerHTML = "A helyes válasz: " + name;
+					realAnswer2.innerHTML = "A helyes válasz: " + name;
 					break;
 			}
 			break;
@@ -164,6 +169,12 @@ function submitAnswer() {
 	isWaiting = "true";
 	localStorage.setItem("isWaiting", "true");
 	asking.style.opacity = 0;
-	answerDisplay.innerHTML = "Your answer is: " + answer;
+	wordDisplay1.innerHTML = word;
+	answerDisplay.innerHTML = "A válaszod: " + answer;
 	setTimeout(() => waiting.style.opacity = 1, 250);
+}
+function formatNewLines(unfiltered) {
+	let filtered = unfiltered.split("\\n").join("<br>");	
+	console.log(filtered);
+	return filtered;
 }

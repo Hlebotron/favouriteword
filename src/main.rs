@@ -232,7 +232,7 @@ fn run_server(address: &str, port1: &str, port2: &str, port3: &str, port4: &str,
                         serve(&file("answerData"), request);
                     },
                     "/reset" => {
-                        tx.send(("cmd:reset".to_string(), true));
+                        tx.send(("cmd:reset".to_string(), false));
                         request.respond(Response::from_string("ok"));
                     },
                     _ => { 

@@ -1,6 +1,6 @@
 const nameElement = document.getElementById("name");
-const wordElement = document.getElementById("word");
-const body = document.getElementsByTagName("body")[0];
+const wordElement = document.getElementById("desc");
+const div = document.getElementsByTagName("body")[0];
 
 const address = window.location.href.split("//").at(1).split(":").at(0);
 const port = Number(window.location.href.split("//").at(1).split(":").at(1).split("/").at(0)) + 1;
@@ -58,7 +58,7 @@ function sanitize() {
 }
 function refreshPage() {
 	if (nameElement.value != "" && wordElement.value != "") {
-		body.style.opacity = 0;
+		div.style.opacity = 0;
 		setTimeout(() => {
 			window.open("/asking", "_self");
 		}, 500);
@@ -69,6 +69,7 @@ function refreshPage() {
 function addData() {
 	//alert(removeAmpersand("name"));
 	sanitize();
+	filterNewLines();
 	console.log(nameElement.value + " " + wordElement.value);
 	if (isSent == "false" && nameElement.value != "" && wordElement.value != "") {
 		let data = nameElement.value + "&" + wordElement.value;
@@ -80,10 +81,10 @@ function addData() {
 		localStorage.setItem("isSent", "true");
 	} else {
 		console.log("Not sent");
-		alert("Not sent");
+		alert("Nem lett elküldve");
 	}
 }
-function removeAmpersand(elementId) {
+/*function removeAmpersand(elementId) {
 	let elementValue = document.getElementById(elementId).value;
 	let split = elementValue.split('');
 	let sanitized = "";
@@ -98,5 +99,12 @@ function removeAmpersand(elementId) {
 	}
 	console.debug(sanitized);
 	return sanitized;
+}*/
+div.style.opacity = 1;
+function filterNewLines() {
+	let desc = document.getElementById('desc');
+	let unfiltered = desc.value;
+	let filtered = unfiltered.split("\n").join("\\n");
+	desc.value = filtered;
 }
-body.style.opacity = 1;
+

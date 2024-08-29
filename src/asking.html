@@ -1,22 +1,30 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
-		<title>Game</title>
+		<title>Találd ki!</title>
 		<link rel="stylesheet" href="style.css">
+		<style>
+			.div {
+				position: absolute;
+			}
+		</style>
+		<meta charset="UTF-8">
 	</head>
 	<body>
 		<div class="div" id="waiting">
-			<h1>Please wait</h1>
+			<h1>Várakozás...</h1>
+			<h2 id="wordDisplay1"></h2>
 			<p id="answerDisplay"></p>
 			<h2 id="realAnswer1"></h2>
 		</div>
 		<div class="div" id="asking">
-			<h1>Questions</h1>
-			<h2 id="word">THE WORD IS [money]</h2>
-			<h2>Who wrote it?</h2>
+			<h1>Kérdések</h1>
+			<h2>A leírás:</h2>
+			<p id="wordDisplay2"></p>
+			<h2>Ki írta?</h2>
 			<h2 id="realAnswer2"></h2>
-			<input type="text" id="clientAnswer" placeholder="Type your guess">
-			<button id="submit" onclick="submitAnswer()">Submit</button>	
+			<input type="text" id="clientAnswer" placeholder="Írd ide a válaszod">
+			<button id="submit" onclick="submitAnswer()">Küldés</button>	
 		</div>
 		<script src="asking.js"></script>
 	</body>
